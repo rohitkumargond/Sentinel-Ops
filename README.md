@@ -16,6 +16,14 @@ make run-backend
 
 In another terminal: `cd apps/dashboard && npm install && npm run dev`. Open http://localhost:5173. API: http://localhost:8000, OpenAPI: http://localhost:8000/docs. Build with `make build-dashboard`.
 
+## Citizen phone reporting view
+
+Open `http://localhost:5173/#/report` or select **OPEN CITIZEN VIEW**. This is a responsive phone-friendly reporting surface with emergency categories, description validation, people affected, browser GPS permission handling, accuracy display, local-first API submission, and a clear emergency-services warning. The dashboard remains a separate coordinator surface.
+
+## Google Maps
+
+Set `VITE_GOOGLE_MAPS_API_KEY` in the dashboard environment when you have an authorized Google Maps Embed API key. The map iframe then uses Google Maps centered on the first incident with coordinates. Without a key, the app uses Google's public embed URL as a development fallback; production deployments should configure a restricted key, billing, attribution, and the required Google Maps terms. Incident coordinates are never fabricated by the API.
+
 ## Implemented
 
 - Incident form validates and saves to local SQLite immediately.
@@ -26,7 +34,7 @@ In another terminal: `cd apps/dashboard && npm install && npm run dev`. Open htt
 
 ## Known limits
 
-This MVP does not yet include production authentication/RBAC, PostgreSQL/PostGIS migrations, rate limiting, encrypted message envelopes, or the React Native Android client. GPS, offline maps, Wi-Fi Direct, and physical-device testing are not claimed. A locally saved report is not confirmation that emergency services received it. Configure secrets through `.env` using `.env.example`; never commit credentials.
+This MVP does not yet include production authentication/RBAC, PostgreSQL/PostGIS migrations, rate limiting, encrypted message envelopes, or the React Native Android client. GPS in the citizen view uses browser permission and is not background tracking. Offline maps, Wi-Fi Direct, and physical-device testing are not claimed. A locally saved report is not confirmation that emergency services received it. Configure secrets through `.env` using `.env.example`; never commit credentials.
 
 ## Next steps
 
