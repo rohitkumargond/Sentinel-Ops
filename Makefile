@@ -4,7 +4,7 @@ test:
 run-backend:
 	$(PYTHON) -m uvicorn backend.app.main:app --reload --port 8000
 install-dashboard:
-	cd apps/dashboard && npm install
+	cd apps/dashboard && npm install --include=optional
 run-dashboard:
 	cd apps/dashboard && npm run dev
 build-dashboard:

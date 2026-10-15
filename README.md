@@ -14,7 +14,7 @@ make test
 make run-backend
 ```
 
-In another terminal: `cd apps/dashboard && npm install && npm run dev`. Open http://localhost:5173. API: http://localhost:8000, OpenAPI: http://localhost:8000/docs. Build with `make build-dashboard`.
+In another terminal: `cd apps/dashboard && npm install --include=optional && npm run dev`. The optional dependency flag is important on Linux because Vite/Rollup uses a platform-specific native package. Open http://localhost:5173. API: http://localhost:8000, OpenAPI: http://localhost:8000/docs. Build with `make build-dashboard`.
 
 ## Citizen phone reporting view
 
