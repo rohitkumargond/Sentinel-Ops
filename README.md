@@ -35,10 +35,12 @@ Set `VITE_GOOGLE_MAPS_API_KEY` in the dashboard environment when you have an aut
 - A separate phone-oriented citizen experience at `/#/report` with bottom navigation: Home, Report SOS, Map, Tasks, and Profile.
 - Light/dark theme selection persisted in browser storage.
 - Offline citizen reports stored in browser `localStorage`, visible in the queue, and retried when the browser reports connectivity. This is browser-local offline support, not native background sync or peer-to-peer mesh.
+- Development role separation: `#/role-select` opens the coordinator console or `#/report` opens the citizen phone console. Coordinator-only APIs require `X-Dev-Role: COORDINATOR`; citizen location submission uses `X-Dev-Role: CITIZEN`.
+- Real browser GPS sharing while the citizen explicitly enables it. Samples include latitude, longitude, accuracy, and UTC capture time, persist in SQLite, and are delivered to coordinator clients through `location.updated` WebSocket events plus polling fallback.
 
 ## Known limits
 
-This MVP does not yet include production authentication/RBAC, PostgreSQL/PostGIS migrations, rate limiting, encrypted message envelopes, or the React Native Android client. GPS in the citizen view uses browser permission and is not background tracking. Offline maps, Wi-Fi Direct, and physical-device testing are not claimed. A locally saved report is not confirmation that emergency services received it. Configure secrets through `.env` using `.env.example`; never commit credentials.
+This MVP does not yet include production authentication/RBAC, PostgreSQL/PostGIS migrations, rate limiting, encrypted message envelopes, or the React Native Android client. The role headers and role selector are development-only separation, not a security boundary. GPS in the citizen view uses browser permission, requires the citizen to keep the page open, and is not background tracking. A coordinator sees only samples actually received by the backend; stale and offline states are shown rather than predicted. Offline maps, Wi-Fi Direct, and physical-device testing are not claimed. A locally saved report is not confirmation that emergency services received it. Configure secrets through `.env` using `.env.example`; never commit credentials.
 
 ## Next steps
 
