@@ -31,6 +31,10 @@ Set `VITE_GOOGLE_MAPS_API_KEY` in the dashboard environment when you have an aut
 - Searchable queue, live WebSocket refresh across connected dashboard clients, audit events.
 - Server-side status transition validation and dispatch creation.
 - Responsive dark command interface with operational states and navigation foundation.
+- Distinct operational pages for teams, dispatch, volunteers, shelters, network monitoring, communications, audit, analytics, users, settings, and help; these no longer redirect to the incident queue.
+- A separate phone-oriented citizen experience at `/#/report` with bottom navigation: Home, Report SOS, Map, Tasks, and Profile.
+- Light/dark theme selection persisted in browser storage.
+- Offline citizen reports stored in browser `localStorage`, visible in the queue, and retried when the browser reports connectivity. This is browser-local offline support, not native background sync or peer-to-peer mesh.
 
 ## Known limits
 
