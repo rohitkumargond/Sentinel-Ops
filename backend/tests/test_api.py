@@ -183,6 +183,17 @@ def test_citizen_can_list_own_incident_statuses():
 
 
 def test_regional_incidents_are_visible_to_citizens():
+    citizen_public = client.post(
+        "/api/v1/incidents",
+        headers=citizen_headers("device-a"),
+        json={
+            "category": "Flood",
+            "description": "Citizen report cannot publish itself",
+            "regional_visibility": True,
+        },
+    )
+    assert citizen_public.status_code == 403
+
     regional = client.post(
         "/api/v1/incidents",
         headers=COORDINATOR_HEADERS,

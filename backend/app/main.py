@@ -223,6 +223,8 @@ async def create_incident(
         raise HTTPException(status_code=403, detail="X-Device-Id is required for citizen reports (development auth only).")
     if role is UserRole.citizen and payload.reporter_device_id and payload.reporter_device_id != device_id:
         raise HTTPException(status_code=403, detail="reporter_device_id must match X-Device-Id for citizen reports.")
+    if role is UserRole.citizen and payload.regional_visibility:
+        raise HTTPException(status_code=403, detail="Only a coordinator can mark an incident regionally visible (development auth only).")
     reporter_device_id = payload.reporter_device_id or device_id
     priority, evidence = triage(payload.category, payload.description); incident_id, timestamp = str(uuid4()), now()
     with connect() as db:
