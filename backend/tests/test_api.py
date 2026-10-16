@@ -2,8 +2,14 @@ from fastapi.testclient import TestClient
 from backend.app.main import app, DB_PATH, init_db
 client = TestClient(app)
 def setup_function():
-    if DB_PATH.exists(): DB_PATH.unlink()
+    # The workspace may be mounted from a host filesystem that prevents unlinking
+    # a database file while another process has it open. Reset rows in place.
     init_db()
+    import sqlite3
+    with sqlite3.connect(DB_PATH) as db:
+        db.execute('DELETE FROM audit_events')
+        db.execute('DELETE FROM assignments')
+        db.execute('DELETE FROM incidents')
 def test_health(): assert client.get('/health').json()['status'] == 'ok'
 def test_incident_triage_and_transition():
     created = client.post('/api/v1/incidents', json={'category':'Fire','description':'Person trapped in occupied building','people_affected':2}).json(); assert created['priority']=='CRITICAL'
