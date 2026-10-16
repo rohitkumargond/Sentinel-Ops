@@ -10,6 +10,10 @@ COORDINATOR_HEADERS = {"X-Dev-Role": "COORDINATOR"}
 CITIZEN_HEADERS = {"X-Dev-Role": "CITIZEN"}
 
 
+def citizen_headers(device_id):
+    return {**CITIZEN_HEADERS, "X-Device-Id": device_id}
+
+
 def setup_function():
     # The workspace may be mounted from a host filesystem that prevents unlinking
     # a database file while another process has it open. Reset rows in place.
@@ -63,6 +67,47 @@ def test_dispatch():
     assert client.get("/api/v1/assignments", headers=COORDINATOR_HEADERS).json()["count"] == 1
 
 
+def test_duplicate_dispatch_requires_completed_reassignment():
+    incident = client.post("/api/v1/incidents", json={"category": "Flood", "description": "Road blocked"}).json()
+    first = client.post(
+        "/api/v1/assignments",
+        json={"incident_id": incident["id"], "team_name": "Alpha Rescue"},
+        headers=COORDINATOR_HEADERS,
+    )
+    assert first.status_code == 201
+
+    duplicate = client.post(
+        "/api/v1/assignments",
+        json={"incident_id": incident["id"], "team_name": "Bravo Rescue"},
+        headers=COORDINATOR_HEADERS,
+    )
+    assert duplicate.status_code == 409
+    assert "active assignment" in duplicate.json()["detail"]
+
+    completed = client.patch(
+        f"/api/v1/assignments/{first.json()['id']}",
+        json={"status": "COMPLETED"},
+        headers=COORDINATOR_HEADERS,
+    )
+    assert completed.status_code == 200
+
+    without_reassign = client.post(
+        "/api/v1/assignments",
+        json={"incident_id": incident["id"], "team_name": "Bravo Rescue"},
+        headers=COORDINATOR_HEADERS,
+    )
+    assert without_reassign.status_code == 409
+    assert "reassign=true" in without_reassign.json()["detail"]
+
+    reassigned = client.post(
+        "/api/v1/assignments",
+        json={"incident_id": incident["id"], "team_name": "Bravo Rescue", "reassign": True},
+        headers=COORDINATOR_HEADERS,
+    )
+    assert reassigned.status_code == 201
+    assert client.get("/api/v1/assignments", headers=COORDINATOR_HEADERS).json()["count"] == 2
+
+
 def test_citizen_cannot_update_assign_or_read_locations():
     incident = client.post("/api/v1/incidents", json={"category": "Medical", "description": "Injured person"}).json()
     location = client.post(
@@ -93,6 +138,79 @@ def test_citizen_cannot_update_assign_or_read_locations():
         f"/api/v1/incidents/{incident['id']}/locations",
         headers=CITIZEN_HEADERS,
     ).status_code == 403
+
+
+def test_citizen_cannot_read_another_device_incident():
+    incident = client.post(
+        "/api/v1/incidents",
+        headers=citizen_headers("device-a"),
+        json={"category": "Medical", "description": "A private medical report"},
+    ).json()
+    assert incident["reporter_device_id"] == "device-a"
+
+    assert client.get(
+        f"/api/v1/incidents/{incident['id']}",
+        headers=citizen_headers("device-b"),
+    ).status_code == 403
+    assert client.get(
+        f"/api/v1/incidents/{incident['id']}",
+        headers=citizen_headers("device-a"),
+    ).status_code == 200
+
+
+def test_citizen_can_list_own_incident_statuses():
+    own = client.post(
+        "/api/v1/incidents",
+        headers=citizen_headers("device-a"),
+        json={"category": "Medical", "description": "Status tracking report"},
+    ).json()
+    client.post(
+        "/api/v1/incidents",
+        headers=citizen_headers("device-b"),
+        json={"category": "Medical", "description": "Another device report"},
+    )
+    client.patch(
+        f"/api/v1/incidents/{own['id']}",
+        headers=COORDINATOR_HEADERS,
+        json={"status": "VERIFIED"},
+    )
+
+    response = client.get("/api/v1/my/incidents", headers=citizen_headers("device-a"))
+    assert response.status_code == 200
+    assert response.json()["count"] == 1
+    assert response.json()["items"][0]["id"] == own["id"]
+    assert response.json()["items"][0]["status"] == "VERIFIED"
+
+
+def test_regional_incidents_are_visible_to_citizens():
+    regional = client.post(
+        "/api/v1/incidents",
+        headers=COORDINATOR_HEADERS,
+        json={
+            "category": "Flood",
+            "description": "Regional river flooding",
+            "regional_visibility": True,
+        },
+    ).json()
+    private = client.post(
+        "/api/v1/incidents",
+        headers=COORDINATOR_HEADERS,
+        json={
+            "category": "Medical",
+            "description": "Private report",
+            "reporter_device_id": "device-b",
+        },
+    ).json()
+
+    listed = client.get("/api/v1/incidents", headers=citizen_headers("device-a"))
+    assert listed.status_code == 200
+    listed_ids = {item["id"] for item in listed.json()["items"]}
+    assert regional["id"] in listed_ids
+    assert private["id"] not in listed_ids
+    assert client.get(
+        f"/api/v1/incidents/{regional['id']}",
+        headers=citizen_headers("device-a"),
+    ).status_code == 200
 
 
 def test_location_persists_and_reads_without_websocket():
