@@ -37,6 +37,8 @@ Set `VITE_GOOGLE_MAPS_API_KEY` in the dashboard environment when you have an aut
 - Offline citizen reports stored in browser `localStorage`, visible in the queue, and retried when the browser reports connectivity. This is browser-local offline support, not native background sync or peer-to-peer mesh.
 - Development role separation: `#/role-select` opens the coordinator console or `#/report` opens the citizen phone console. Coordinator-only APIs require `X-Dev-Role: COORDINATOR`; citizen location submission uses `X-Dev-Role: CITIZEN`.
 - Real browser GPS sharing while the citizen explicitly enables it. Samples include latitude, longitude, accuracy, and UTC capture time, persist in SQLite, and are delivered to coordinator clients through `location.updated` WebSocket events plus polling fallback.
+- Active dispatches are idempotently protected: the same incident cannot be dispatched again while an assignment is active. Reassignment is only possible after the prior assignment is marked `COMPLETED` or `CANCELLED`.
+- Citizens can review their own incident status and delivery state. Reports and locations are device-scoped; other citizens cannot read them. Coordinators can publish eligible regional emergencies for public visibility.
 
 ## Known limits
 
