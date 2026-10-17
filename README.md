@@ -55,11 +55,13 @@ The three local demo roles are:
 - **Field officer** is separate from admin. It can read its assigned briefing, advance its own assignment through `PENDING → EN_ROUTE → ON_SCENE → COMPLETED` (or cancel it), and submit assignment-scoped GPS samples.
 - **Citizen** can submit reports, share device GPS, and view only its device-scoped report status plus admin-published regional incidents.
 
+Citizen and Field Officer sessions remain available from their browser-local cache when the API is offline, but each session is guarded to its own role route and persistent device scope. Direct links to another role's dashboard are redirected back to the current role's landing view. To choose another local role, open `#/role-select`; Citizen and Field Officer dashboards intentionally do not expose a workspace or switch-role control. The Field Officer header shows its persistent device identifier in masked form (`Device ···xxxxxx`). Admin retains the workspace and logout controls.
+
 The demo endpoint is `POST /api/v1/auth/demo-login` with `{"role":"admin"}`, `{"role":"field officer"}`, or `{"role":"citizen"}`. `coordinator` remains accepted as a legacy login alias and resolves to the Admin identity so older local clients do not create a second command role. Older `X-Dev-Role: COORDINATOR` headers are also normalized to `ADMIN`; new clients should send `X-Dev-Role: ADMIN`.
 
 These identities and `X-Dev-Role`/`X-Demo-User` headers are local development selectors only. Responses include `production_auth: false`. This project does not claim production authentication, token verification, or a production RBAC security boundary.
 
-Citizen navigation is route-backed: `#/report`, `#/map`, `#/status`, `#/profile`, and `#/home` reopen the selected citizen surface after a browser refresh. The citizen Home uses the desktop workspace layout on wide screens and the compact app-like navigation on mobile widths.
+Citizen navigation is route-backed: `#/report`, `#/map`, `#/status`, `#/profile`, and `#/home` reopen the selected citizen surface after a browser refresh. The citizen Home uses the desktop workspace layout on wide screens and the compact app-like navigation on mobile widths. Role routes are guarded in the browser: cached Citizen and Field Officer sessions cannot cross into each other or Admin routes without returning through the local entry screen.
 
 On narrow Admin screens, incident details open as a bottom-sheet drawer: the detail body scrolls inside the viewport, the close control remains available, and the update actions stay reachable at the bottom. The operations map uses visible markers derived from stored incident/GPS coordinates. Incidents without coordinates remain in the list but show an explicit no-coordinate state and cannot be routed to until a real destination exists.
 
