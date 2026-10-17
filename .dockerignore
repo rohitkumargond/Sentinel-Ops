@@ -1,0 +1,10 @@
+.git
+.opencode
+__pycache__
+*.pyc
+node_modules
+apps/dashboard/node_modules
+apps/dashboard/dist
+sentinel_ops.db
+.env
+.pytest_cache

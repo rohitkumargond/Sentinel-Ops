@@ -10,7 +10,7 @@ Pinned runtimes are recorded in `.python-version` (Python 3.11) and `.nvmrc` (No
 python3 -m venv .venv
 . .venv/bin/activate
 python -m pip install -r backend/requirements.txt
-make install-dashboard
+npm ci
 ```
 
 The repository root now has a workspace dependency lockfile at `package-lock.json`, and the dashboard also retains `apps/dashboard/package-lock.json` for standalone use. Use `npm ci` at the repository root for a clean workspace install, or `npm ci` in `apps/dashboard` for a dashboard-only install. Keep credentials in a local `.env` based on `.env.example`; never commit secrets.
@@ -24,12 +24,14 @@ make run-backend                         # http://localhost:8000
 make run-dashboard                       # http://localhost:5173
 ```
 
-Useful endpoints are `/health` and `/docs`. Build the dashboard with `make build-dashboard`. The Docker image runs the API on port 8000:
+Useful endpoints are `/health` and `/docs`. Build the dashboard with `make build-dashboard`. The Docker image builds both services and serves the compiled dashboard at `/dashboard/` on port 8000:
 
 ```bash
 docker build -t sentinel-ops .
 docker run --rm -p 8000:8000 sentinel-ops
 ```
+
+Open `http://localhost:8000/dashboard/` for the containerized dashboard and `http://localhost:8000/docs` for the API docs.
 
 ## Test
 
@@ -40,6 +42,8 @@ make test
 ```
 
 It runs the FastAPI tests from `backend/tests`. Dashboard production compilation is available separately with `make build-dashboard`.
+
+The committed root `package-lock.json` is the reproducible JavaScript dependency lockfile. Run `npm ci` from the repository root for a clean install.
 
 ## Local demo entry
 

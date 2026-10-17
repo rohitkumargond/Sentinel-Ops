@@ -6,6 +6,7 @@ from typing import Optional
 from uuid import UUID, uuid4
 import json
 import sqlite3
+from fastapi.staticfiles import StaticFiles
 
 from fastapi import Depends, FastAPI, Header, HTTPException, Query, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
@@ -15,6 +16,12 @@ ROOT = Path(__file__).resolve().parents[2]
 DB_PATH = ROOT / "sentinel_ops.db"
 app = FastAPI(title="Sentinel-Ops API", version="0.1.0")
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
+
+# The Docker image includes the compiled dashboard. Local development still
+# uses Vite at :5173, so the mount is optional and does not affect the API.
+WEB_DIST = ROOT / "apps" / "dashboard" / "dist"
+if WEB_DIST.exists():
+    app.mount("/dashboard", StaticFiles(directory=WEB_DIST, html=True), name="dashboard")
 
 class Priority(str, Enum):
     critical = "CRITICAL"; urgent = "URGENT"; normal = "NORMAL"; informational = "INFORMATIONAL"
