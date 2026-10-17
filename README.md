@@ -1,52 +1,78 @@
 # Sentinel-Ops
 
-Offline-first emergency coordination MVP. It currently implements a real FastAPI incident/triage/dispatch API backed by SQLite, a responsive command dashboard, WebSocket incident events, audit records, and local-first incident capture in the dashboard. Unsupported transports are reported honestly rather than fabricated.
+Offline-first emergency coordination MVP. The workspace contains a FastAPI + SQLite command API and a Vite/React dashboard. The implemented slice includes incident intake and triage, admin dispatch and field-officer assignments, real GPS sample storage, WebSocket events, audit records, and browser-local offline queues.
 
-## Quick start
+## Setup
 
-Requires Python 3.11+ and Node 20+. PostgreSQL, Android SDK, and physical devices are not required for this implemented slice.
+Pinned runtimes are recorded in `.python-version` (Python 3.11) and `.nvmrc` (Node 20). PostgreSQL, Android tooling, and physical devices are not required for this local build.
 
 ```bash
 python3 -m venv .venv
 . .venv/bin/activate
-pip install -r backend/requirements.txt
-make test
-make run-backend
+python -m pip install -r backend/requirements.txt
+make install-dashboard
 ```
 
-In another terminal: `cd apps/dashboard && npm install --include=optional && npm run dev`. The optional dependency flag is important on Linux because Vite/Rollup uses a platform-specific native package. Open http://localhost:5173. API: http://localhost:8000, OpenAPI: http://localhost:8000/docs. Build with `make build-dashboard`.
+The dashboard dependency lockfile is `apps/dashboard/package-lock.json`; use `npm ci` in `apps/dashboard` for a clean, locked install. Keep credentials in a local `.env` based on `.env.example`; never commit secrets.
 
-## Citizen phone reporting view
+## Run
 
-Open `http://localhost:5173/#/report` or select **OPEN CITIZEN VIEW**. This is a responsive phone-friendly reporting surface with emergency categories, description validation, people affected, browser GPS permission handling, accuracy display, local-first API submission, and a clear emergency-services warning. The dashboard remains a separate coordinator surface.
+Start the API and dashboard in separate terminals:
 
-## Google Maps
+```bash
+make run-backend                         # http://localhost:8000
+make run-dashboard                       # http://localhost:5173
+```
 
-Set `VITE_GOOGLE_MAPS_API_KEY` in the dashboard environment when you have an authorized Google Maps Embed API key. The map iframe then uses Google Maps centered on the first incident with coordinates. Without a key, the app uses Google's public embed URL as a development fallback; production deployments should configure a restricted key, billing, attribution, and the required Google Maps terms. Incident coordinates are never fabricated by the API.
+Useful endpoints are `/health` and `/docs`. Build the dashboard with `make build-dashboard`. The Docker image runs the API on port 8000:
 
-## Implemented
+```bash
+docker build -t sentinel-ops .
+docker run --rm -p 8000:8000 sentinel-ops
+```
 
-- Incident form validates and saves to local SQLite immediately.
-- Rule-based transparent triage returns priority and evidence.
-- Searchable queue, live WebSocket refresh across connected dashboard clients, audit events.
-- Server-side status transition validation and dispatch creation.
-- Responsive dark command interface with operational states and navigation foundation.
-- Distinct operational pages for teams, dispatch, volunteers, shelters, network monitoring, communications, audit, analytics, users, settings, and help; these no longer redirect to the incident queue.
-- A separate phone-oriented citizen experience at `/#/report` with bottom navigation: Home, Report SOS, Map, Tasks, and Profile.
-- Light/dark theme selection persisted in browser storage.
-- Offline citizen reports stored in browser `localStorage`, visible in the queue, and retried when the browser reports connectivity. This is browser-local offline support, not native background sync or peer-to-peer mesh.
-- Development role separation: `#/role-select` opens the coordinator console or `#/report` opens the citizen phone console. Coordinator-only APIs require `X-Dev-Role: COORDINATOR`; citizen location submission uses `X-Dev-Role: CITIZEN`.
-- Real browser GPS sharing while the citizen explicitly enables it. Samples include latitude, longitude, accuracy, and UTC capture time, persist in SQLite, and are delivered to coordinator clients through `location.updated` WebSocket events plus polling fallback.
-- Active dispatches are idempotently protected: the same incident cannot be dispatched again while an assignment is active. Reassignment is only possible after the prior assignment is marked `COMPLETED` or `CANCELLED`.
-- Citizens can review their own incident status and delivery state. Reports and locations are device-scoped; other citizens cannot read them. Coordinators can publish eligible regional emergencies for public visibility.
+## Test
 
-## Known limits
+The single offline test command is:
 
-This MVP does not yet include production authentication/RBAC, PostgreSQL/PostGIS migrations, rate limiting, encrypted message envelopes, or the React Native Android client. The role headers and role selector are development-only separation, not a security boundary. GPS in the citizen view uses browser permission, requires the citizen to keep the page open, and is not background tracking. A coordinator sees only samples actually received by the backend; stale and offline states are shown rather than predicted. Offline maps, Wi-Fi Direct, and physical-device testing are not claimed. A locally saved report is not confirmation that emergency services received it. Configure secrets through `.env` using `.env.example`; never commit credentials.
+```bash
+make test
+```
 
-## Next steps
+It runs the FastAPI tests from `backend/tests`. Dashboard production compilation is available separately with `make build-dashboard`.
 
-1. Add JWT authentication and central permission dependencies.
-2. Add PostgreSQL/PostGIS and Alembic migrations.
-3. Add React Native Android SQLite/location/offline-map shell and Kotlin Wi-Fi Direct transport.
-4. Run the documented two-device transfer plan on supported hardware.
+## Local demo roles
+
+Open `http://localhost:5173/#/role-select` and choose one of the three local demo roles:
+
+- **Admin** is the command role. It can review and update incidents, assign field-officer tasks with instructions, read assignments, and access admin location APIs.
+- **Field officer** is separate from admin. It can read its assigned briefing, advance its own assignment through `PENDING → EN_ROUTE → ON_SCENE → COMPLETED` (or cancel it), and submit assignment-scoped GPS samples.
+- **Citizen** can submit reports, share device GPS, and view only its device-scoped report status plus admin-published regional incidents.
+
+The demo endpoint is `POST /api/v1/auth/demo-login` with `{"role":"admin"}`, `{"role":"field officer"}`, or `{"role":"citizen"}`. `coordinator` remains accepted as a legacy login alias and resolves to the Admin identity so older local clients do not create a second command role. Older `X-Dev-Role: COORDINATOR` headers are also normalized to `ADMIN`; new clients should send `X-Dev-Role: ADMIN`.
+
+These identities and `X-Dev-Role`/`X-Demo-User` headers are local development selectors only. Responses include `production_auth: false`. This project does not claim production authentication, token verification, or a production RBAC security boundary.
+
+Citizen navigation is route-backed: `#/report`, `#/map`, `#/status`, `#/profile`, and `#/home` reopen the selected citizen surface after a browser refresh. The citizen Home uses the desktop workspace layout on wide screens and the compact app-like navigation on mobile widths.
+
+On narrow Admin screens, incident details open as a bottom-sheet drawer: the detail body scrolls inside the viewport, the close control remains available, and the update actions stay reachable at the bottom. The operations map uses visible markers derived from stored incident/GPS coordinates. Incidents without coordinates remain in the list but show an explicit no-coordinate state and cannot be routed to until a real destination exists.
+
+## Offline behavior
+
+The dashboard stays usable when the API or browser network is unavailable:
+
+- Citizen reports are written to browser `localStorage` and retried when connectivity returns.
+- The field-officer briefing is cached; status updates and GPS samples queue locally and retry later.
+- The dashboard displays `OFFLINE · LOCAL`, stale, or last-known state rather than inventing delivery, positions, or directions.
+- SQLite is the local command-node database. Offline saves are not confirmation that emergency services received a report.
+- Admin Settings includes **Clear server demo data**. It requires the Admin development role and a confirmation, then clears persisted incidents, assignments, GPS samples, messages (if present), and audit/history records through `POST /api/v1/admin/demo-data/clear`. It does not delete citizen report queues, field-officer status/location queues, or cached briefings in browser `localStorage`; those remain device-local until the user clears that browser storage.
+
+This is browser-local offline support, not background native sync, peer-to-peer mesh, or offline map tiles. Browser GPS requires explicit permission and an open page.
+
+## Map configuration
+
+Copy `.env.example` to `.env` and set `VITE_GOOGLE_MAPS_API_KEY` when using an authorized Google Maps Embed API key. The dashboard centers the map on real incident or GPS coordinates returned by the API and renders markers only for coordinates that exist. Missing coordinates show an explicit fallback state; no map position is invented. The incident location details provide a **Route to incident** link using the stored destination (and the coordinator's real GPS position when available) through an external Google Maps URL. Without a key it uses Google's public development embed URL. Production deployments must configure a restricted key, billing, attribution, and the applicable Google Maps terms.
+
+## Implemented limits
+
+The MVP does not include JWT authentication, PostgreSQL/PostGIS migrations, rate limiting, encrypted message envelopes, native Android, background tracking, offline map data, Wi-Fi Direct, or physical-device validation. Safe-location entries are a small demo catalog and must be verified on arrival. Configure secrets through `.env` using `.env.example`.
