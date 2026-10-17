@@ -13,7 +13,7 @@ python -m pip install -r backend/requirements.txt
 make install-dashboard
 ```
 
-The dashboard dependency lockfile is `apps/dashboard/package-lock.json`; use `npm ci` in `apps/dashboard` for a clean, locked install. Keep credentials in a local `.env` based on `.env.example`; never commit secrets.
+The repository root now has a workspace dependency lockfile at `package-lock.json`, and the dashboard also retains `apps/dashboard/package-lock.json` for standalone use. Use `npm ci` at the repository root for a clean workspace install, or `npm ci` in `apps/dashboard` for a dashboard-only install. Keep credentials in a local `.env` based on `.env.example`; never commit secrets.
 
 ## Run
 
@@ -41,9 +41,15 @@ make test
 
 It runs the FastAPI tests from `backend/tests`. Dashboard production compilation is available separately with `make build-dashboard`.
 
-## Local demo roles
+## Local demo entry
 
-Open `http://localhost:5173/#/role-select` and choose one of the three local demo roles:
+Open `http://localhost:5173/#/role-select`. The local entry screen provides:
+
+- **Admin sign-in:** use the quick-fill button or email `admin@sentinel.local` and password `sentinel-demo`. This is browser-local demo validation only.
+- **Field officer:** choose **Continue without login · Local demo access**. The field workflow uses a seeded local field identity and works from its cached briefing while offline.
+- **Citizen:** choose **Continue without login · Local demo access**. Citizen reports and GPS preferences remain scoped to the browser device.
+
+The three local demo roles are:
 
 - **Admin** is the command role. It can review and update incidents, assign field-officer tasks with instructions, read assignments, and access admin location APIs.
 - **Field officer** is separate from admin. It can read its assigned briefing, advance its own assignment through `PENDING → EN_ROUTE → ON_SCENE → COMPLETED` (or cancel it), and submit assignment-scoped GPS samples.
