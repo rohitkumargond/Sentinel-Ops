@@ -389,12 +389,12 @@ function CitizenPhoneView({ theme, setTheme, queue, syncQueue, onQueued, onSaved
   const handleReportSaved = (incidentId?: string) => { if (incidentId) setActiveIncidentId(incidentId); onSaved(); void refreshCitizenData(); };
   const selectTab = (nextTab: CitizenTab) => { setTab(nextTab); writeJson(CITIZEN_TAB_KEY, nextTab); window.location.hash = citizenHashForTab(nextTab); };
   const tabs: [typeof tab, React.ComponentType<{ size?: number }>, string][] = [['home', LayoutDashboard, 'Home'], ['report', Flame, 'Report SOS'], ['map', Map, 'Map'], ['status', ClipboardList, 'My status'], ['profile', UserRound, 'Profile']];
-   return <div className={`citizen-phone ${theme}`}><header className="citizen-header"><div className="brand-mark"><Crosshair size={19} /></div><div className="citizen-brand-copy"><b>SENTINEL-OPS</b><small>EMERGENCY REPORTING</small></div><span className={`citizen-network-pill ${online ? 'online' : 'offline'}`}><span />{online ? 'LIVE' : 'OFFLINE'}</span><span className="dev-role-badge">DEV · CITIZEN</span><button className="icon" onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')} title="Toggle theme" aria-label="Toggle theme">{theme === 'dark' ? <Sun /> : <Moon />}</button></header><main className="citizen-content">
+    return <div className={`citizen-phone ${theme}`}><header className="citizen-header"><div className="brand-mark"><Crosshair size={19} /></div><div className="citizen-brand-copy"><b>SENTINEL-OPS</b><small>EMERGENCY REPORTING</small></div><span className={`citizen-network-pill ${online ? 'online' : 'offline'}`} title="Browser network connection"><span />{online ? 'ONLINE' : 'OFFLINE'}</span><span className="dev-role-badge">DEV · CITIZEN</span><button className="icon" onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')} title="Toggle theme" aria-label="Toggle theme">{theme === 'dark' ? <Sun /> : <Moon />}</button></header><main key={tab} className="citizen-content" aria-label={tabs.find(([value]) => value === tab)?.[2]}>
     {tab === 'home' && <CitizenHome online={online} queue={queue} syncQueue={syncQueue} incidents={myIncidents} sharing={sharing} setSharing={setSharing} location={location} stale={stale} error={locationError} onReport={() => selectTab('report')} onStatus={() => selectTab('status')} onMap={() => selectTab('map')} />}
      {tab === 'report' && <CitizenReportFormV2 onQueued={onQueued} onSaved={handleReportSaved} />}
-       {tab === 'map' && <section className="citizen-card full"><span className="eyebrow">REGIONAL SAFETY</span><h2>Community map</h2><p className="muted">Public regional flood, fire, building-collapse, and typhoon/cyclone reports are shown with your device-scoped reports. Coordinates are never estimated.</p><CommunityMap incidents={mapIncidents} location={location} /></section>}
+       {tab === 'map' && <section className="citizen-card full citizen-map-card"><span className="citizen-section-icon" aria-hidden="true"><Map size={22} /></span><span className="eyebrow">REGIONAL SAFETY</span><h2>Community map</h2><p className="muted">Public regional flood, fire, building-collapse, and typhoon/cyclone reports are shown with your device-scoped reports. Coordinates are never estimated.</p><CommunityMap incidents={mapIncidents} location={location} /></section>}
      {tab === 'status' && <CitizenStatusView incidents={myIncidents} loading={statusLoading} error={statusError} onRefresh={refreshCitizenData} />}
-     {tab === 'profile' && <section className="citizen-card full"><span className="eyebrow">YOUR DEVICE</span><h2>Profile & privacy</h2><p className="muted">This browser keeps your unsent reports and last GPS fix locally. The device label below is masked and is only used to scope your reports.</p><div className="profile-device-info"><span><b>Device label</b><small>{maskDeviceId(deviceId)}</small></span><span><b>Local data</b><small>Reports, status cache, and last fix</small></span></div><LocationSharingCard sharing={sharing} setSharing={setSharing} location={location} stale={stale} error={locationError} /><div className="profile-setting"><span><b>Appearance</b><small>{theme === 'dark' ? 'Dark mode' : 'Light mode'}</small></span><button className="secondary" onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}>{theme === 'dark' ? 'USE LIGHT' : 'USE DARK'}</button></div><div className="profile-setting"><span><b>Unsent reports</b><small>{queue.length} stored locally</small></span>{queue.length > 0 && <button className="secondary" onClick={syncQueue}>RETRY SYNC</button>}</div></section>}
+      {tab === 'profile' && <section className="citizen-card full citizen-profile-card"><span className="citizen-section-icon" aria-hidden="true"><ShieldCheck size={22} /></span><span className="eyebrow">YOUR DEVICE</span><h2>Profile & privacy</h2><p className="muted">This browser keeps your unsent reports and last GPS fix locally. The device label below is masked and is only used to scope your reports.</p><div className="profile-device-info"><span><b>Device label</b><small>{maskDeviceId(deviceId)}</small></span><span><b>Local data</b><small>Reports, status cache, and last fix</small></span></div><LocationSharingCard sharing={sharing} setSharing={setSharing} location={location} stale={stale} error={locationError} /><div className="profile-setting"><span><b>Appearance</b><small>{theme === 'dark' ? 'Dark mode' : 'Light mode'}</small></span><button className="secondary" onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}>{theme === 'dark' ? 'USE LIGHT' : 'USE DARK'}</button></div><div className="profile-setting"><span><b>Unsent reports</b><small>{queue.length} stored locally</small></span>{queue.length > 0 && <button className="secondary" onClick={syncQueue}>RETRY SYNC</button>}</div></section>}
     </main><nav className="citizen-bottom-nav" aria-label="Citizen navigation">{tabs.map(([value, Icon, label]) => <button type="button" key={value} className={tab === value ? 'active' : ''} aria-current={tab === value ? 'page' : undefined} onClick={() => selectTab(value)}><span className="citizen-tab-icon"><Icon size={19} />{value === 'report' && queue.length > 0 && <em className="nav-badge">{queue.length}</em>}</span><span className="citizen-tab-label">{label}</span></button>)}</nav></div>;
 }
 
@@ -432,6 +432,7 @@ function CitizenReportFormV2({ onQueued, onSaved }: { onQueued: (item: QueuedRep
   const [gpsState, setGpsState] = useState<'idle' | 'requesting' | 'located' | 'denied' | 'unavailable' | 'error'>('idle');
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
+  const [submitting, setSubmitting] = useState(false);
   const deviceId = useMemo(() => getDeviceId(), []);
   const locate = () => {
     if (!navigator.geolocation) { setGpsState('unavailable'); setError('This browser does not support GPS. You can submit without a location.'); return; }
@@ -445,8 +446,9 @@ function CitizenReportFormV2({ onQueued, onSaved }: { onQueued: (item: QueuedRep
     }, { enableHighAccuracy: true, maximumAge: 10_000, timeout: 15_000 });
   };
   const submit = async (event: FormEvent) => {
-    event.preventDefault(); setError('');
+    event.preventDefault(); if (submitting) return; setError('');
     if (description.trim().length < 3) { setError('Describe the emergency in at least three characters.'); return; }
+    setSubmitting(true); setMessage('');
     const payload = { ...location, category, description: description.trim(), people_affected: people, reporter_device_id: deviceId };
     try {
       if (!navigator.onLine) throw new Error('offline');
@@ -457,10 +459,38 @@ function CitizenReportFormV2({ onQueued, onSaved }: { onQueued: (item: QueuedRep
     } catch {
       onQueued({ id: `local-${Date.now()}`, payload, createdAt: new Date().toISOString(), attempts: 0 });
       setDescription(''); setMessage('Saved on this device. It will retry when connection returns.');
+    } finally {
+      setSubmitting(false);
     }
   };
   const gpsLabel = gpsState === 'requesting' ? 'Requesting permission…' : gpsState === 'located' ? 'Location attached' : gpsState === 'denied' ? 'Permission denied' : gpsState === 'unavailable' ? 'GPS unavailable' : 'No location attached';
-  return <form className="citizen-card report-phone" onSubmit={submit}><span className="eyebrow">LOCAL-FIRST INTAKE</span><h2>Report an emergency</h2><p className="muted">Share what is happening. A location is optional, but a real coordinate helps responders find you.</p><label>Emergency type<select value={category} onChange={event => { setCategory(event.target.value); setLocation(current => ({ ...current, category: event.target.value })); }}><option>Medical emergency</option><option>Fire</option><option>Flood</option><option>Building collapse</option><option>Typhoon / cyclone</option><option>Other emergency</option></select></label><label>What is happening?<textarea value={description} onChange={event => setDescription(event.target.value)} rows={5} placeholder="Describe the situation, landmark, and immediate danger" /></label><label>People affected<input type="number" min={1} max={10000} value={people} onChange={event => setPeople(Math.max(1, Number(event.target.value) || 1))} /></label><div className={`location-box gps-${gpsState}`}><Navigation size={18} /><div><b>{location.latitude != null && location.longitude != null ? gpsLabel : gpsLabel}</b><span>{location.latitude != null && location.longitude != null ? `${location.latitude.toFixed(5)}, ${location.longitude.toFixed(5)} · ±${Math.round(location.accuracy_m || 0)} m` : gpsState === 'requesting' ? 'Approve the browser prompt to attach your actual position.' : 'You can submit without sharing GPS.'}</span></div><button type="button" className="secondary" onClick={locate} disabled={gpsState === 'requesting'}>{gpsState === 'requesting' ? 'LOCATING…' : 'USE MY LOCATION'}</button></div>{error && <div className="form-error">{error}</div>}{message && <div className="form-success">{message}</div>}<button className="sos report-submit" type="submit"><Flame size={16} /> SEND REPORT</button><div className="safety-note"><AlertTriangle size={17} />This tool does not replace emergency services. Call your local emergency number when it is safe to do so.</div></form>;
+  return <form className="citizen-card report-phone" onSubmit={submit} aria-busy={submitting}>
+    <span className="citizen-section-icon emergency-icon" aria-hidden="true"><Flame size={22} /></span>
+    <span className="eyebrow">LOCAL-FIRST INTAKE</span>
+    <h2>Report an emergency</h2>
+    <p className="muted">Share what is happening. A location is optional, but a real coordinate helps responders find you.</p>
+    <label>Emergency type
+      <select value={category} onChange={event => { setCategory(event.target.value); setLocation(current => ({ ...current, category: event.target.value })); }}>
+        <option>Medical emergency</option><option>Fire</option><option>Flood</option><option>Building collapse</option><option>Typhoon / cyclone</option><option>Other emergency</option>
+      </select>
+    </label>
+    <label>What is happening?
+      <textarea value={description} onChange={event => setDescription(event.target.value)} rows={5} placeholder="Describe the situation, landmark, and immediate danger" aria-describedby="report-description-hint" />
+    </label>
+    <small id="report-description-hint" className="report-field-hint">A nearby landmark and any immediate hazards help responders understand your report.</small>
+    <label>People affected
+      <input type="number" min={1} max={10000} value={people} onChange={event => setPeople(Math.max(1, Number(event.target.value) || 1))} />
+    </label>
+    <div className={`location-box gps-${gpsState}`} aria-busy={gpsState === 'requesting'}>
+      <Navigation size={18} />
+      <div><b>{gpsLabel}</b><span>{location.latitude != null && location.longitude != null ? `${location.latitude.toFixed(5)}, ${location.longitude.toFixed(5)} · ±${Math.round(location.accuracy_m || 0)} m` : gpsState === 'requesting' ? 'Approve the browser prompt to attach your actual position.' : 'You can submit without sharing GPS.'}</span></div>
+      <button type="button" className="secondary" onClick={locate} disabled={gpsState === 'requesting'}>{gpsState === 'requesting' ? <><RefreshCw size={14} className="spin" /> LOCATING…</> : 'USE MY LOCATION'}</button>
+    </div>
+    {error && <div className="form-error" role="alert">{error}</div>}
+    {message && <div className="form-success" role="status"><CheckCircle2 size={16} />{message}</div>}
+    <button className="sos report-submit" type="submit" disabled={submitting}>{submitting ? <RefreshCw size={16} className="spin" /> : <Flame size={16} />}{submitting ? 'SENDING REPORT…' : 'SEND REPORT'}</button>
+    <div className="safety-note"><AlertTriangle size={17} />This tool does not replace emergency services. Call your local emergency number when it is safe to do so.</div>
+  </form>;
 }
 
 function CommunityMap({ incidents, location }: { incidents: Incident[]; location?: LocationFix | null }) {
