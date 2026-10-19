@@ -1,5 +1,7 @@
 FROM node:20-bookworm-slim AS dashboard-build
 WORKDIR /build
+ARG VITE_API_URL=
+ENV VITE_API_URL=$VITE_API_URL
 COPY package.json package-lock.json ./
 COPY apps/dashboard/package.json ./apps/dashboard/package.json
 RUN npm ci --ignore-scripts

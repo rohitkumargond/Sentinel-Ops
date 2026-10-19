@@ -8,7 +8,11 @@ import {
 } from 'lucide-react';
 import './styles.css';
 
-const API = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+// Keep local Vite development pointed at the separately running API, while
+// making production deployments use the same origin by default. A deployed
+// browser must never interpret localhost as the API host unless it is running
+// the local development server.
+const API = import.meta.env.VITE_API_URL || (import.meta.env.DEV ? 'http://localhost:8000' : window.location.origin);
 const GOOGLE_MAPS_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || '';
 type Theme = 'dark' | 'light';
 type Role = 'citizen' | 'admin' | 'field_officer';
