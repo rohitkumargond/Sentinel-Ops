@@ -144,7 +144,29 @@ function App() {
     }
     writeJson(queueStorageKey, remaining); setQueue(remaining); if (remaining.length !== current.length) load();
   };
-   useEffect(() => { if (role !== 'admin') return; load(); const socket = new WebSocket(eventsUrl('admin')); socket.onopen = () => setOnline(true); socket.onmessage = load; socket.onerror = () => setOnline(false); socket.onclose = () => setOnline(false); return () => socket.close(); }, [search, role]);
+   useEffect(() => {
+     if (role !== 'admin') return;
+     void load();
+     // WebSocket is the fast path; polling is an intentional fallback for
+     // browser proxies, reconnects, and local demo setups where WS is blocked.
+     const poll = window.setInterval(() => { if (document.visibilityState === 'visible') void load(); }, 5000);
+     const socket = new WebSocket(eventsUrl('admin'));
+     socket.onopen = () => setOnline(true);
+     socket.onmessage = event => {
+       try {
+         const message = JSON.parse(event.data) as { type?: string; data?: Incident };
+         if (message.type === 'incident.created' && message.data) {
+           setIncidents(current => current.some(item => item.id === message.data!.id) ? current : [message.data!, ...current]);
+           setOnline(true);
+         } else if (message.type === 'incident.updated' || message.type === 'assignment.created' || message.type === 'assignment.updated') {
+           void load();
+         }
+       } catch { void load(); }
+     };
+     socket.onerror = () => setOnline(false);
+     socket.onclose = () => setOnline(false);
+     return () => { window.clearInterval(poll); socket.close(); };
+   }, [search, role]);
   useEffect(() => { const onlineChange = () => { setOnline(navigator.onLine); if (navigator.onLine) syncQueue(); }; window.addEventListener('online', onlineChange); window.addEventListener('offline', onlineChange); return () => { window.removeEventListener('online', onlineChange); window.removeEventListener('offline', onlineChange); }; }, []);
    useEffect(() => { const hashChange = () => { const next = routeForHash(window.location.hash); if (next === 'Role Select') { setRole(null); setPage(next); return; } if (!role) { setPage('Role Select'); window.location.hash = '/role-select'; return; } const guarded = guardedPageForRole(role, window.location.hash); if (guarded !== next) { setPage(guarded); window.location.hash = hashForPage(guarded); return; } setPage(guarded); }; window.addEventListener('hashchange', hashChange); return () => window.removeEventListener('hashchange', hashChange); }, [role]);
    useEffect(() => { if (!role || page === 'Role Select') return; const guarded = guardedPageForRole(role, window.location.hash); if (guarded !== page || window.location.hash !== `#${hashForPage(page)}`) { setPage(guarded); if (window.location.hash !== `#${hashForPage(guarded)}`) window.location.hash = hashForPage(guarded); } }, [role]);
