@@ -12,6 +12,9 @@ COPY backend/requirements.txt ./backend/requirements.txt
 RUN pip install --no-cache-dir -r backend/requirements.txt
 COPY backend ./backend
 COPY .env.example ./
+
+# 👇 COPY ASSETS SO THEY ALIGN WITH PATH: ROOT / "apps" / "dashboard" / "dist" 👇
 COPY --from=dashboard-build /build/apps/dashboard/dist ./apps/dashboard/dist
+
 EXPOSE 8000
 CMD ["uvicorn","backend.app.main:app","--host","0.0.0.0","--port","8000"]
