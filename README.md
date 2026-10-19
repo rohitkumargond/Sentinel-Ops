@@ -43,6 +43,21 @@ make test
 
 It runs the FastAPI tests from `backend/tests`. Dashboard production compilation is available separately with `make build-dashboard`.
 
+For a single-container deployment, the dashboard uses the same origin as the API by default. Build and run it with:
+
+```bash
+docker build -t sentinel-ops .
+docker run --rm -p 8000:8000 sentinel-ops
+```
+
+Open `http://localhost:8000/` (it redirects to `/dashboard/`). If the API is hosted at a different public origin, provide it at build time so browser requests do not target the user's localhost:
+
+```bash
+docker build --build-arg VITE_API_URL=https://api.example.com -t sentinel-ops .
+```
+
+The production bundle is built with the repository's locked dependencies. Do not copy a host `node_modules` directory into the image; the Docker build installs Linux dependencies with `npm ci` before running Vite.
+
 The committed root `package-lock.json` is the reproducible JavaScript dependency lockfile. Run `npm ci` from the repository root for a clean install.
 
 ## Local demo entry

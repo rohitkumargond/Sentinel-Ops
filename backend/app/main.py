@@ -10,6 +10,7 @@ from fastapi.staticfiles import StaticFiles
 
 from fastapi import Depends, FastAPI, Header, HTTPException, Query, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import RedirectResponse
 from pydantic import BaseModel, Field, field_validator, model_validator
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -22,6 +23,14 @@ app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], all
 WEB_DIST = ROOT / "apps" / "dashboard" / "dist"
 if WEB_DIST.exists():
     app.mount("/dashboard", StaticFiles(directory=WEB_DIST, html=True), name="dashboard")
+
+
+@app.get("/", include_in_schema=False)
+def dashboard_entry():
+    """Make the single-container deployment usable from its host root URL."""
+    if WEB_DIST.exists():
+        return RedirectResponse(url="/dashboard/")
+    return {"service": "sentinel-ops", "dashboard": "/dashboard/", "status": "api-only"}
 
 class Priority(str, Enum):
     critical = "CRITICAL"; urgent = "URGENT"; normal = "NORMAL"; informational = "INFORMATIONAL"
